@@ -160,4 +160,31 @@ class AssessmentViewModelTest {
         assertTrue("Quiz should be complete after answering all and clicking next", finalState.isQuizComplete)
         assertEquals("Calculated score should match expected score", expectedScore, finalState.score)
     }
+
+    @Test
+    fun `previousQuestion decrements currentQuestionIndex and clears quizComplete`() = runTest {
+        // Navigate forward first
+        viewModel.nextQuestion()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val currentIndexAfterNext = viewModel.uiState.value.currentQuestionIndex
+        assertTrue("currentQuestionIndex should be > 0 after next", currentIndexAfterNext > 0)
+
+        viewModel.previousQuestion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val stateAfterPrevious = viewModel.uiState.value
+        assertEquals(currentIndexAfterNext - 1, stateAfterPrevious.currentQuestionIndex)
+        assertFalse("isQuizComplete should be false after previousQuestion", stateAfterPrevious.isQuizComplete)
+    }
+
+    @Test
+    fun `previousQuestion at first question does not change index`() = runTest {
+        val initialIndex = viewModel.uiState.value.currentQuestionIndex
+        assertEquals("Should start at index 0", 0, initialIndex)
+
+        viewModel.previousQuestion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("Index should remain 0", 0, viewModel.uiState.value.currentQuestionIndex)
+    }
 }

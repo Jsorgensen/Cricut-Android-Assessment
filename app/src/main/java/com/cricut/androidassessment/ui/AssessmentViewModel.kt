@@ -35,14 +35,14 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
             ),
             MultipleChoiceQuestion(
                 id = "mc1",
-                text = "What is the main ingredient in traditional Italian pesto?",
+                text = "What is the correct way to eat tomato sauce?",
                 options = listOf(
-                    AnswerOption("opt1_pine", "Pine Nuts"),
-                    AnswerOption("opt1_basil", "Basil"),
-                    AnswerOption("opt1_garlic", "Garlic"),
-                    AnswerOption("opt1_parmesan", "Parmesan Cheese")
+                    AnswerOption("opt1_tomato_soup", "Tomato Soup"),
+                    AnswerOption("opt1_v8", "V8"),
+                    AnswerOption("opt1_marinara", "Marinara"),
+                    AnswerOption("opt1_tomato_sauce", "Tomato Sauce")
                 ),
-                correctAnswerOptionId = "opt1_basil",
+                correctAnswerOptionId = "opt1_marinara",
                 points = 15
             ),
             TrueFalseQuestion(
@@ -67,6 +67,10 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
             return
         }
 
+        if (_uiState.value.currentQuestionIndex < _uiState.value.questions.size - 1) {
+            nextQuestion()
+        }
+
         // Store the user's answer
         _uiState.update { currentState ->
             val newAnswers = currentState.userAnswers.toMutableMap()
@@ -81,8 +85,12 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
             if (currentState.currentQuestionIndex < currentState.questions.size - 1) {
                 currentState.copy(currentQuestionIndex = currentState.currentQuestionIndex + 1)
             } else {
-                calculateScore()
-                currentState.copy(isQuizComplete = true)
+                if (!currentState.isQuizComplete) {
+                    calculateScore()
+                    currentState.copy(isQuizComplete = true)
+                } else {
+                    currentState
+                }
             }
         }
     }
@@ -110,7 +118,20 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
             }
         }
         _uiState.update { it.copy(score = currentScore) }
-        println("Quiz finished! Final Score: $currentScore")
+        println("Score calculated! Final Score: $currentScore")
+    }
+
+    fun previousQuestion() {
+        _uiState.update { currentState ->
+            if (currentState.currentQuestionIndex > 0) {
+                currentState.copy(
+                    currentQuestionIndex = currentState.currentQuestionIndex - 1,
+                    isQuizComplete = false
+                )
+            } else {
+                currentState
+            }
+        }
     }
 }
 

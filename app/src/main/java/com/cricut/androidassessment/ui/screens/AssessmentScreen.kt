@@ -52,7 +52,8 @@ fun AssessmentScreen(
             onAnswerSelected = { questionId, answer ->
                 viewModel.selectAnswer(questionId, answer)
             },
-            onNextClicked = { viewModel.nextQuestion() }
+            onNextClicked = { viewModel.nextQuestion() },
+            onBackClicked = { viewModel.previousQuestion() }
         )
     }
 }
@@ -107,7 +108,8 @@ fun QuizContent(
     modifier: Modifier = Modifier,
     uiState: QuizUiState,
     onAnswerSelected: (questionId: String, answer: String) -> Unit,
-    onNextClicked: () -> Unit
+    onNextClicked: () -> Unit,
+    onBackClicked: () -> Unit
 ) {
     if (uiState.currentQuestionIndex >= uiState.questions.size) {
         Text("Error: Question index out of bounds.", modifier = modifier.padding(16.dp))
@@ -161,12 +163,21 @@ fun QuizContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Spacer(modifier = Modifier.weight(1f)) // Placeholder for Back button
+            Button(
+                onClick = onBackClicked,
+                enabled = uiState.currentQuestionIndex > 0,
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
+            ) {
+                Text("Back")
+            }
+
             Button(
                 onClick = onNextClicked,
-                enabled = uiState.userAnswers.containsKey(currentQuestion.id)
+                enabled = uiState.userAnswers.containsKey(currentQuestion.id),
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
             ) {
                 Text(if (uiState.currentQuestionIndex < uiState.questions.size - 1) "Next" else "Finish")
             }
@@ -329,7 +340,8 @@ fun QuizContentPreview_MultipleChoice() {
         QuizContent(
             uiState = sampleUiState,
             onAnswerSelected = { _, _ -> },
-            onNextClicked = {}
+            onNextClicked = {},
+            onBackClicked = {}
         )
     }
 }
@@ -415,7 +427,8 @@ fun QuizContentPreview_TrueFalse() {
         QuizContent(
             uiState = sampleUiState,
             onAnswerSelected = { _, _ -> },
-            onNextClicked = {}
+            onNextClicked = {},
+            onBackClicked = {}
         )
     }
 }
@@ -432,7 +445,8 @@ fun QuizContentPreview_NoQuestions() {
         QuizContent(
             uiState = sampleUiState,
             onAnswerSelected = { _, _ -> },
-            onNextClicked = {}
+            onNextClicked = {},
+            onBackClicked = {}
         )
     }
 }
