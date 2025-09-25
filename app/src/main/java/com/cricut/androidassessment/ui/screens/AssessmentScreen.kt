@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -122,13 +124,12 @@ fun QuizContent(
     }
 
     val currentQuestion = uiState.questions[uiState.currentQuestionIndex]
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -142,49 +143,61 @@ fun QuizContent(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            when (currentQuestion) {
-                is TrueFalseQuestion -> {
-                    TrueFalseQuestionUI(
-                        question = currentQuestion,
-                        selectedAnswer = uiState.userAnswers[currentQuestion.id]?.toBooleanStrictOrNull(),
-                        onAnswerSelected = { answerBoolean ->
-                            onAnswerSelected(currentQuestion.id, answerBoolean.toString())
-                        }
-                    )
-                }
-                is MultipleChoiceQuestion -> {
-                    MultipleChoiceQuestionUI(
-                        question = currentQuestion,
-                        selectedOptionId = uiState.userAnswers[currentQuestion.id],
-                        onOptionSelected = { optionId ->
-                            onAnswerSelected(currentQuestion.id, optionId)
-                        }
-                    )
-                }
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = onBackClicked,
-                enabled = uiState.currentQuestionIndex > 0,
-                modifier = Modifier.weight(1f).padding(end = 8.dp)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Back")
+                when (currentQuestion) {
+                    is TrueFalseQuestion -> {
+                        TrueFalseQuestionUI(
+                            question = currentQuestion,
+                            selectedAnswer = uiState.userAnswers[currentQuestion.id]?.toBooleanStrictOrNull(),
+                            onAnswerSelected = { answerBoolean ->
+                                onAnswerSelected(currentQuestion.id, answerBoolean.toString())
+                            }
+                        )
+                    }
+                    is MultipleChoiceQuestion -> {
+                        MultipleChoiceQuestionUI(
+                            question = currentQuestion,
+                            selectedOptionId = uiState.userAnswers[currentQuestion.id],
+                            onOptionSelected = { optionId ->
+                                onAnswerSelected(currentQuestion.id, optionId)
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Button(
-                onClick = onNextClicked,
-                enabled = uiState.userAnswers.containsKey(currentQuestion.id),
-                modifier = Modifier.weight(1f).padding(end = 8.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (uiState.currentQuestionIndex < uiState.questions.size - 1) "Next" else "Finish")
+                Button(
+                    onClick = onBackClicked,
+                    enabled = uiState.currentQuestionIndex > 0,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text("Back")
+                }
+
+                Button(
+                    onClick = onNextClicked,
+                    enabled = uiState.userAnswers.containsKey(currentQuestion.id),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(if (uiState.currentQuestionIndex < uiState.questions.size - 1) "Next" else "Finish")
+                }
             }
         }
     }
