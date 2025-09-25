@@ -45,7 +45,7 @@ fun AssessmentScreen(
             modifier = modifier,
             score = uiState.score,
             possibleScore = uiState.possibleScore,
-            totalQuestions = uiState.questions.size
+            onRestartClicked = { viewModel.restartQuiz() }
         )
         else -> QuizContent(
             modifier = modifier,
@@ -64,7 +64,7 @@ fun QuizCompleteScreen(
     modifier: Modifier = Modifier,
     score: Int,
     possibleScore: Int,
-    totalQuestions: Int
+    onRestartClicked: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -78,6 +78,9 @@ fun QuizCompleteScreen(
         Text("Your score: $score / $possibleScore",
             style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(32.dp))
+        Button(onClick = onRestartClicked) { // Add the restart button
+            Text("Restart Quiz")
+        }
     }
 }
 
@@ -352,7 +355,7 @@ fun QuizContentPreview_MultipleChoice() {
 @Composable
 fun QuizCompleteScreenPreview() {
     AndroidAssessmentTheme {
-        QuizCompleteScreen(score = 80, possibleScore = 100, totalQuestions = 10)
+        QuizCompleteScreen(score = 80, possibleScore = 100, onRestartClicked = {})
     }
 }
 

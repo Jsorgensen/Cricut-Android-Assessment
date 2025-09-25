@@ -228,4 +228,42 @@ class AssessmentViewModelTest {
 
         assertEquals("Index should remain 0", 0, viewModel.uiState.value.currentQuestionIndex)
     }
+
+    @Test
+    fun `restartQuiz resets quiz state and reloads questions`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Simulate going through a few questions and answering
+        viewModel.selectAnswer(testQuestions[0].id, "false")
+        viewModel.nextQuestion()
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.selectAnswer(testQuestions[1].id, "a")
+        viewModel.nextQuestion()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+
+        // Ensure state is not initial before restart
+        val stateBeforeRestart = viewModel.uiState.value
+        assertTrue("Should have some user answers before restart", stateBeforeRestart.userAnswers.isNotEmpty())
+        assertTrue("Should be on last question or complete", stateBeforeRestart.currentQuestionIndex > 0 || stateBeforeRestart.isQuizComplete)
+        // If it got completed, score might be set
+        if (stateBeforeRestart.isQuizComplete) {
+            assertTrue("Score should be calculated if complete", stateBeforeRestart.score >= 0)
+        }
+
+
+        // Action: Restart the quiz
+        viewModel.restartQuiz()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val stateAfterRestart = viewModel.uiState.value
+
+        assertEquals("Current question index should be 0 after restart", 0, stateAfterRestart.currentQuestionIndex)
+        assertTrue("User answers should be empty after restart", stateAfterRestart.userAnswers.isEmpty())
+        assertFalse("Quiz should not be complete after restart", stateAfterRestart.isQuizComplete)
+        assertEquals("Score should be 0 after restart", 0, stateAfterRestart.score)
+        assertFalse("Should not be loading after restart and question load", stateAfterRestart.isLoading)
+        assertEquals("Questions should be the test questions from mock repo", testQuestions.size, stateAfterRestart.questions.size)
+    }
+
 }

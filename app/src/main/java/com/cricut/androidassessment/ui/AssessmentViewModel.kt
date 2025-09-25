@@ -125,5 +125,21 @@ class AssessmentViewModel @Inject constructor(
             }
         }
     }
+
+    fun restartQuiz() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                currentQuestionIndex = 0,
+                userAnswers = emptyMap(),
+                isQuizComplete = false,
+                score = 0,
+                isLoading = false
+            )
+        }
+
+        loadQuestionsFromRepository()
+
+        println("Quiz restarted!")
+    }
 }
 
