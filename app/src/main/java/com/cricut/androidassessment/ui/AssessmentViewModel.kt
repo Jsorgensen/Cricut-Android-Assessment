@@ -1,63 +1,50 @@
 package com.cricut.androidassessment.ui
 
 import androidx.lifecycle.ViewModel
-import com.cricut.androidassessment.data.model.AnswerOption
+import androidx.lifecycle.viewModelScope
 import com.cricut.androidassessment.data.model.MultipleChoiceQuestion
-import com.cricut.androidassessment.data.model.Question
 import com.cricut.androidassessment.data.model.QuizUiState
 import com.cricut.androidassessment.data.model.TrueFalseQuestion
+import com.cricut.androidassessment.data.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
-class AssessmentViewModel @Inject constructor() : ViewModel() {
+class AssessmentViewModel @Inject constructor(
+    private val quizRepository: QuizRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuizUiState())
     val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
 
     init {
         println("AssessmentViewModel created and injected by Hilt!")
-        loadQuestions()
+        loadQuestionsFromRepository()
     }
 
-    private fun loadQuestions() {
-        // Temporary, hardcoded questions for testing. To be removed later.
-        val sampleQuestions: List<Question> = listOf(
-            TrueFalseQuestion(
-                id = "tf1",
-                text = "Kotlin is better than Java.",
-                correctAnswer = true,
-                points = 10
-            ),
-            MultipleChoiceQuestion(
-                id = "mc1",
-                text = "What is the correct way to eat tomato sauce?",
-                options = listOf(
-                    AnswerOption("opt1_tomato_soup", "Tomato Soup"),
-                    AnswerOption("opt1_v8", "V8"),
-                    AnswerOption("opt1_marinara", "Marinara"),
-                    AnswerOption("opt1_tomato_sauce", "Tomato Sauce")
-                ),
-                correctAnswerOptionId = "opt1_marinara",
-                points = 15
-            ),
-            TrueFalseQuestion(
-                id = "tf2",
-                text = "Water boils at 100 degrees Celsius at sea level.",
-                correctAnswer = true,
-                points = 5
-            )
-        )
-        _uiState.update {
-            it.copy(
-                questions = sampleQuestions,
-                isLoading = false
-            )
-        }
+    private fun loadQuestionsFromRepository() {
+        _uiState.update { it.copy(isLoading = true) }
+
+        quizRepository.getQuizQuestions()
+            .onEach { questions ->
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        questions = questions,
+                        isLoading = false,
+                        currentQuestionIndex = 0,
+                        userAnswers = emptyMap(),
+                        isQuizComplete = false,
+                        score = 0
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun selectAnswer(questionId: String, answer: String) {
@@ -97,10 +84,12 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
 
     private fun calculateScore() {
         var currentScore = 0
+        var possibleScore = 0
         val questions = _uiState.value.questions
         val userAnswers = _uiState.value.userAnswers
 
         questions.forEach { question ->
+            possibleScore += question.points
             val userAnswer = userAnswers[question.id]
             if (userAnswer != null) {
                 when (question) {
@@ -117,7 +106,10 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
                 }
             }
         }
-        _uiState.update { it.copy(score = currentScore) }
+        _uiState.update { it.copy(
+            score = currentScore,
+            possibleScore = possibleScore
+        ) }
         println("Score calculated! Final Score: $currentScore")
     }
 

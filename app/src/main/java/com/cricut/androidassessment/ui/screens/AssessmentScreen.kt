@@ -44,6 +44,7 @@ fun AssessmentScreen(
         uiState.isQuizComplete -> QuizCompleteScreen(
             modifier = modifier,
             score = uiState.score,
+            possibleScore = uiState.possibleScore,
             totalQuestions = uiState.questions.size
         )
         else -> QuizContent(
@@ -62,6 +63,7 @@ fun AssessmentScreen(
 fun QuizCompleteScreen(
     modifier: Modifier = Modifier,
     score: Int,
+    possibleScore: Int,
     totalQuestions: Int
 ) {
     Column(
@@ -73,7 +75,7 @@ fun QuizCompleteScreen(
     ) {
         Text("Quiz Complete!", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Your score: $score / ${totalQuestions * 10}",
+        Text("Your score: $score / $possibleScore",
             style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -350,7 +352,7 @@ fun QuizContentPreview_MultipleChoice() {
 @Composable
 fun QuizCompleteScreenPreview() {
     AndroidAssessmentTheme {
-        QuizCompleteScreen(score = 80, totalQuestions = 10)
+        QuizCompleteScreen(score = 80, possibleScore = 100, totalQuestions = 10)
     }
 }
 

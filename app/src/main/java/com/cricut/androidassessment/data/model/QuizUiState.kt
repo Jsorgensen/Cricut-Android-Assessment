@@ -6,5 +6,6 @@ data class QuizUiState(
     val userAnswers: Map<String, String> = emptyMap(),
     val isQuizComplete: Boolean = false,
     val isLoading: Boolean = true,
-    val score: Int = 0
+    val score: Int = 0,
+    val possibleScore: Int = 0
 )

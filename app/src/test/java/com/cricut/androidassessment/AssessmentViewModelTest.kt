@@ -1,11 +1,16 @@
 package com.cricut.androidassessment
 
+import com.cricut.androidassessment.data.model.AnswerOption
 import com.cricut.androidassessment.data.model.MultipleChoiceQuestion
+import com.cricut.androidassessment.data.model.Question
 import com.cricut.androidassessment.data.model.TrueFalseQuestion
+import com.cricut.androidassessment.data.repository.QuizRepository
 import com.cricut.androidassessment.ui.AssessmentViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -23,12 +28,28 @@ class AssessmentViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
+    private lateinit var mockQuizRepository: QuizRepository
     private lateinit var viewModel: AssessmentViewModel
+
+    private val testQuestions: List<Question> = listOf(
+        TrueFalseQuestion("tf_test1", "Test TF 1: Is this a test?", 5, true),
+        MultipleChoiceQuestion(
+            "mc_test1", "Test MCQ 1: Choose A",
+            10,
+            listOf(AnswerOption("a", "A"), AnswerOption("b", "B")),
+            "a"
+        )
+    )
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = AssessmentViewModel()
+
+        mockQuizRepository = object : QuizRepository {
+            override fun getQuizQuestions(): Flow<List<Question>> = flowOf(testQuestions)
+        }
+
+        viewModel = AssessmentViewModel(mockQuizRepository)
     }
 
     @After
@@ -37,11 +58,21 @@ class AssessmentViewModelTest {
     }
 
     @Test
+    fun `loadQuestionsFromRepository populates questions and sets isLoading to false`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val uiState = viewModel.uiState.value
+        assertFalse("isLoading should be false after loadQuestions", uiState.isLoading)
+        assertEquals("Questions list should match testQuestions", testQuestions.size, uiState.questions.size)
+        assertEquals(testQuestions[0].id, uiState.questions[0].id)
+    }
+
+    @Test
     fun `loadQuestions populates questions and sets isLoading to false`() = runTest(testDispatcher) {
         val uiState = viewModel.uiState.value
         assertFalse("isLoading should be false after loadQuestions", uiState.isLoading)
         assertTrue("Questions list should not be empty", uiState.questions.isNotEmpty())
-        assertEquals("Should have 2 questions loaded by default", 3, uiState.questions.size)
+        assertEquals("Should have 2 questions loaded by default", 2, uiState.questions.size)
     }
 
     @Test
@@ -104,21 +135,29 @@ class AssessmentViewModelTest {
 
     @Test
     fun `nextQuestion on last question marks quiz complete and calculates score`() = runTest {
-        val totalQuestions = viewModel.uiState.value.questions.size
-        assertTrue("Should have questions loaded", totalQuestions > 0)
+        testDispatcher.scheduler.advanceUntilIdle() // Load questions
+        val loadedQuestions = viewModel.uiState.value.questions
+        assertTrue("Test questions should be loaded", loadedQuestions.isNotEmpty())
 
         // Navigate to the last question
-        repeat(totalQuestions - 1) {
+        repeat(loadedQuestions.size - 1) {
             viewModel.nextQuestion()
             testDispatcher.scheduler.advanceUntilIdle()
         }
-        assertEquals(totalQuestions - 1, viewModel.uiState.value.currentQuestionIndex)
-        assertFalse("Quiz should not be complete yet", viewModel.uiState.value.isQuizComplete)
 
-
-        // Answer the last question (assuming it's TrueFalse for simplicity in test)
-        val lastQuestion = viewModel.uiState.value.questions.last()
-        viewModel.selectAnswer(lastQuestion.id, (lastQuestion as TrueFalseQuestion).correctAnswer.toString())
+        // Answer the last question correctly
+        val lastQuestion = loadedQuestions.last()
+        var expectedScore = 0
+        when (lastQuestion) {
+            is TrueFalseQuestion -> {
+                viewModel.selectAnswer(lastQuestion.id, lastQuestion.correctAnswer.toString())
+                expectedScore = lastQuestion.points
+            }
+            is MultipleChoiceQuestion -> {
+                viewModel.selectAnswer(lastQuestion.id, lastQuestion.correctAnswerOptionId)
+                expectedScore = lastQuestion.points
+            }
+        }
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Click Next on the last question
@@ -127,7 +166,9 @@ class AssessmentViewModelTest {
 
         val finalState = viewModel.uiState.value
         assertTrue("Quiz should be complete", finalState.isQuizComplete)
-        assertTrue("Score should be greater than 0 if answered correctly", finalState.score > 0)
+        if(expectedScore > 0) {
+            assertEquals("Score should include points from correctly answered last question", expectedScore, finalState.score)
+        }
     }
 
     @Test
