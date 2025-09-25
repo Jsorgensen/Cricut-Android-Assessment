@@ -1,6 +1,8 @@
 package com.cricut.androidassessment.ui
 
 import androidx.lifecycle.ViewModel
+import com.cricut.androidassessment.data.model.AnswerOption
+import com.cricut.androidassessment.data.model.MultipleChoiceQuestion
 import com.cricut.androidassessment.data.model.Question
 import com.cricut.androidassessment.data.model.QuizUiState
 import com.cricut.androidassessment.data.model.TrueFalseQuestion
@@ -28,8 +30,20 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
             TrueFalseQuestion(
                 id = "tf1",
                 text = "Kotlin is better than Java.",
-                correctAnswer = false,
+                correctAnswer = true,
                 points = 10
+            ),
+            MultipleChoiceQuestion(
+                id = "mc1",
+                text = "What is the main ingredient in traditional Italian pesto?",
+                options = listOf(
+                    AnswerOption("opt1_pine", "Pine Nuts"),
+                    AnswerOption("opt1_basil", "Basil"),
+                    AnswerOption("opt1_garlic", "Garlic"),
+                    AnswerOption("opt1_parmesan", "Parmesan Cheese")
+                ),
+                correctAnswerOptionId = "opt1_basil",
+                points = 15
             ),
             TrueFalseQuestion(
                 id = "tf2",
@@ -41,25 +55,62 @@ class AssessmentViewModel @Inject constructor() : ViewModel() {
         _uiState.update {
             it.copy(
                 questions = sampleQuestions,
-                isLoading = false // Questions are now "loaded"
+                isLoading = false
             )
         }
     }
 
-    fun selectAnswer(questionId: String, answer: Boolean) {
+    fun selectAnswer(questionId: String, answer: String) {
         val currentQuestion = _uiState.value.questions.find { it.id == questionId }
-        if (currentQuestion == null || currentQuestion !is TrueFalseQuestion) {
-            println("Error: Question not found or not a TrueFalseQuestion for ID: $questionId")
+        if (currentQuestion == null) {
+            println("Error: Question not found for ID: $questionId")
             return
         }
 
         // Store the user's answer
         _uiState.update { currentState ->
             val newAnswers = currentState.userAnswers.toMutableMap()
-            newAnswers[questionId] = answer.toString() // Store boolean as string
+            newAnswers[questionId] = answer
 
             currentState.copy(userAnswers = newAnswers)
         }
+    }
+
+    fun nextQuestion() {
+        _uiState.update { currentState ->
+            if (currentState.currentQuestionIndex < currentState.questions.size - 1) {
+                currentState.copy(currentQuestionIndex = currentState.currentQuestionIndex + 1)
+            } else {
+                calculateScore()
+                currentState.copy(isQuizComplete = true)
+            }
+        }
+    }
+
+    private fun calculateScore() {
+        var currentScore = 0
+        val questions = _uiState.value.questions
+        val userAnswers = _uiState.value.userAnswers
+
+        questions.forEach { question ->
+            val userAnswer = userAnswers[question.id]
+            if (userAnswer != null) {
+                when (question) {
+                    is TrueFalseQuestion -> {
+                        if (question.correctAnswer.toString() == userAnswer) {
+                            currentScore += question.points
+                        }
+                    }
+                    is MultipleChoiceQuestion -> {
+                        if (question.correctAnswerOptionId == userAnswer) {
+                            currentScore += question.points
+                        }
+                    }
+                }
+            }
+        }
+        _uiState.update { it.copy(score = currentScore) }
+        println("Quiz finished! Final Score: $currentScore")
     }
 }
 
